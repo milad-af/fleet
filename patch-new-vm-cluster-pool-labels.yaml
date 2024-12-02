@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: patch-vm-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: patch-vm-role
+  namespace: default
+rules:
+- apiGroups: [ "kubevirt.io" ]
+  resources: [ "virtualmachines" ]
+  verbs: [ "get", "list", "patch" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: patch-vm-rolebinding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: patch-vm-sa
+  namespace: default
+roleRef:
+  kind: Role
+  name: patch-vm-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: patch-new-vm-labels
+  namespace: default
+spec:
+  schedule: "*/1 * * * *" # Run every 1 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: patch-vm-sa
+          restartPolicy: Never
+          containers:
+          - name: patch-vms
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Get the current time (1 minutes ago)
+              current_time=$(date -u -d "-1 minutes" --iso-8601=seconds)
+
+              # Get the list of virtual machines in the default namespace
+              kubectl get virtualmachines -n default -o custom-columns=":metadata.name,:metadata.creationTimestamp,:metadata.labels" | while read vm; do
+                # Extract VM name and creation timestamp
+                vmName=$(echo $vm | cut -f1 -d' ')
+                creationTimestamp=$(echo $vm | cut -f2 -d' ')
+
+                # Proceed only if the VM was created within the last 10 minutes
+               if [ "$(date -d "$creationTimestamp" +%s)" -gt "$(date -d "$current_time" +%s)" ]; then
+                  # Extract the "harvesterhci.io/vmName" label
+                  vmNameLabel=$(kubectl get virtualmachine $vmName -n default -o=jsonpath='{.metadata.labels.harvesterhci\.io/vmName}')
+
+                  if [ -n "$vmNameLabel" ]; then
+                    # Split the vmNameLabel by dash and remove the last two parts
+
+                    clusterPool=$(echo "$vmNameLabel" | rev | cut -d'-' -f3- | rev)
+                    # Patch the VM with the new label
+                    kubectl patch virtualmachine $vmName -n default --type='json' -p="[{\"op\": \"add\", \"path\": \"/spec/template/metadata/labels/cluster-pool\", \"value\": \"$clusterPool\"}]"
+                  fi
+                fi
+              done
