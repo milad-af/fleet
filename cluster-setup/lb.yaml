@@ -1,0 +1,31 @@
+apiVersion: loadbalancer.harvesterhci.io/v1beta1
+kind: LoadBalancer
+metadata:
+  name: 'example-lb'
+  annotations:
+    loadbalancer.harvesterhci.io/namespace: default
+    loadbalancer.harvesterhci.io/network: ''
+    loadbalancer.harvesterhci.io/project: '**********' #will be autofilled when you create LB through GUI
+  finalizers:
+    - wrangler.cattle.io/harvester-lb-controller
+  labels:
+  namespace: default
+spec:
+  healthCheck:
+  ipam: pool
+  listeners:
+    - backendPort: 443
+      name: https
+      port: 443
+      protocol: TCP
+    - backendPort: 80
+      name: http
+      port: 80
+      protocol: TCP
+  backendServerSelector:
+    cluster-pool:
+      - <cluster_name>-<worker_node_pool_name>
+      # How to get value for cluster-pool
+      # Open Rancher>Cluster Management> Click on cluster > Machine pool
+  ipPool: example-pool
+  workloadType: vm

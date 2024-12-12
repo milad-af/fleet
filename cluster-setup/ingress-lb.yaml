@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: 'example-lb-ingress'
+  annotations:
+    cert-manager.io/cluster-issuer: production-issuer
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/ssl-passthrough: 'true'
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: example.exmaple.example-develop.nl
+      http:
+        paths:
+          - backend:
+              service:
+                name: example-pool-worker-lb
+                port:
+                  number: 443
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        -  example.exmaple.example-develop.nl
+      secretName: example-example-tls-secret

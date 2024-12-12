@@ -1,0 +1,22 @@
+apiVersion: loadbalancer.harvesterhci.io/v1beta1
+kind: IPPool
+metadata:
+  name: 'example-pool'
+  annotations:
+  finalizers:
+    - wrangler.cattle.io/harvester-ipam-controller
+  labels:
+    loadbalancer.harvesterhci.io/global-ip-pool: 'false'
+    loadbalancer.harvesterhci.io/vid: '1'
+spec:
+  selector:
+    network: default/dhcp-mgnt
+    scope:
+      - guestCluster: test-cluster
+        namespace: '*'
+        project: '*'
+  ranges:
+    - gateway: 172.16.29.2
+      rangeEnd: 172.16.29.xx
+      rangeStart: 172.16.29.xx
+      subnet: 172.16.29.0/24
