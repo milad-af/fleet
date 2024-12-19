@@ -51,7 +51,7 @@ spec:
               # Get the current time (1 minutes ago)
               current_time=$(date -u -d "-1 minutes" --iso-8601=seconds)
 
-              # Get the list of virtual machines in the default namespace
+              # Get the list of virtual machines
               kubectl get virtualmachines -n default -o custom-columns=":metadata.name,:metadata.creationTimestamp,:metadata.labels" | while read vm; do
                 # Extract VM name and creation timestamp
                 vmName=$(echo $vm | cut -f1 -d' ')
