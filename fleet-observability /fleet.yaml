@@ -8,3 +8,5 @@ targetCustomizations:
     releaseName: loki
     valuesFiles:
     - "charts/loki/values.yaml"
+targets:
+  - name: loki-stack
